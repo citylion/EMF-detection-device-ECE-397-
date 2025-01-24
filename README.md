@@ -9,3 +9,4 @@ OBJECTIVE:
 The goal is to design and develop an EMF detector that measures and displays EMF levels depending on the location of the user, providing individuals concerned with EMF’s valuable data. The system will detect low and high-frequency electromagnetic radiation and provide real time data and alerts to the user regarding the EMF waves. The system will include geolocation tracking and data logging in order to map out to the user areas of high EMF waves that the user can further choose to avoid in the future. 
 
 ![image alt](https://github.com/dmedi2/EMF-detection-device-ECE-397-/blob/main/Wiring.jpg?raw=true)
+![image alt](https://github.com/dmedi2/EMF-detection-device-ECE-397-/blob/main/direct%20wiring%20guide.jpg?raw=true)
