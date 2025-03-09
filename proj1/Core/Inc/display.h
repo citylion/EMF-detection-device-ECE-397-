@@ -22,3 +22,6 @@ void display_clear();
 
 void display_image();
 
+//sets 12 pixels
+void twelve_write(int x, int y, int dat);
+
