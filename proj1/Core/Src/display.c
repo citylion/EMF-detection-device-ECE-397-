@@ -167,6 +167,8 @@ unsigned char NHD_Logo [] = {
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
+unsigned char buffer [2048];
+
 /****************************************************
 *                 Function Commands                  *
 *****************************************************/
@@ -553,6 +555,12 @@ void imageTestLoop() {
 
 }
 
+
+
+/*****************************************************
+*           Extension Functions                      *
+*****************************************************/
+
 void display_test(){
 	ImageDisplay_25664(NHD_Logo);
 }
@@ -569,3 +577,43 @@ void display_image(unsigned char *image){
 	ImageDisplay_25664(image);
 }
 
+//updates the display, sending the latest data from image buffer
+void update_display(){
+	display_image(buffer);
+}
+
+//sets the given pixel to 0 (off) or 1 (on)
+//Pixel 255 is the rightmost pixel of the first row
+//Pixel 256 is the leftmost pixel of the second row
+void set_rawpixel(int pixelNum, _Bool value){
+	int bytenum = pixelNum/8;
+	int shift = pixelNum%8;
+	char dat = buffer[bytenum];
+	unsigned int mask = 1 << shift;
+	if (value)
+	    dat |= mask;    // set the bit
+	else
+	    dat &= ~mask;   // clear the bit
+
+	buffer[bytenum] = dat;
+}
+
+int invalid=0;//number of invalid calls
+
+//sets the given pixel to 0 (off) or 1 (on)
+//Pixel 0,0 is the top-left-most pixel.
+//pixel 255,63 is the bottom-right-most pixel
+void set_pixel(int x, int y, _Bool value){
+	//prevent invalid calls
+	if(x>255 || x<0 || y<0 || y>63){ invalid++; return; };
+	int raw = y * 256 +x;
+}
+
+//sets 12 pixels
+void twelve_write(int x, int y, int dat){
+	if(x>243 || x<0 || y<0 || y>63){ invalid++; return; };
+	int raw = y * 256 +x;
+	char old = buffer[raw];
+	old = old ^ (dat << 4);
+
+}
