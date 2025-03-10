@@ -613,7 +613,9 @@ void set_pixel(int x, int y, _Bool value){
 void twelve_write(int x, int y, int dat){
 	if(x>243 || x<0 || y<0 || y>63){ invalid++; return; };
 	int raw = y * 256 +x;
-	char old = buffer[raw];
-	old = old ^ (dat << 4);
-
+	int i;
+	for(i=1; i<2049; i*2){
+		_Bool value = dat & i;
+		set_rawpixel(raw,value);
+	}
 }
