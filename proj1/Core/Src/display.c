@@ -167,7 +167,8 @@ unsigned char NHD_Logo [] = {
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-unsigned char buffer [2048];
+
+unsigned char buffer[2048];
 
 /****************************************************
 *                 Function Commands                  *
@@ -539,35 +540,8 @@ void display_setup()
 }
 
 /*****************************************************
-*           Loop Function, to run repeatedly         *
-*****************************************************/
-
-void imageTestLoop() {
-
-	FillPixel_25664();
-	HAL_Delay(1000);
-	display_clear();
-	HAL_Delay(1000);
-	display_test();
-	HAL_Delay(5000);
-	display_clear();
-	HAL_Delay(1000);
-
-}
-
-
-
-/*****************************************************
 *           Extension Functions                      *
 *****************************************************/
-
-void display_test(){
-	ImageDisplay_25664(NHD_Logo);
-}
-
-void display_clear(){
-	ClearPixel_25664();
-}
 
 void display_command(unsigned char a){
 	Display_Mode_25664(a);
@@ -578,8 +552,19 @@ void display_image(unsigned char *image){
 }
 
 //updates the display, sending the latest data from image buffer
-void update_display(){
+void display_update(){
 	display_image(buffer);
+}
+
+void display_test(){
+
+	ImageDisplay_25664(NHD_Logo);
+}
+
+
+void display_clear(){
+
+	ClearPixel_25664();
 }
 
 //sets the given pixel to 0 (off) or 1 (on)
@@ -613,9 +598,30 @@ void set_pixel(int x, int y, _Bool value){
 void twelve_write(int x, int y, int dat){
 	if(x>243 || x<0 || y<0 || y>63){ invalid++; return; };
 	int raw = y * 256 +x;
+	int pos=0;
 	int i;
-	for(i=1; i<2049; i*2){
-		_Bool value = dat & i;
-		set_rawpixel(raw,value);
+	for(i=1; i<2049; i=i*2){
+		_Bool value = dat &i;
+		set_rawpixel(raw+pos,value);
+		pos++;
 	}
 }
+
+/*****************************************************
+*           Loop Function, to run repeatedly         *
+*****************************************************/
+
+
+void imageTestLoop() {
+
+	FillPixel_25664();
+	HAL_Delay(1000);
+	display_clear();
+	HAL_Delay(1000);
+	display_test();
+	HAL_Delay(5000);
+	display_clear();
+	HAL_Delay(1000);
+
+}
+

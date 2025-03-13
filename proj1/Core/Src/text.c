@@ -40,7 +40,7 @@ void write_character(char c){
 	if(c<45 || c>96){
 		return;
 	}
-		int fontpos = c-46; //normalize the ascii value to the font.c array
+		int fontpos = (c-46)*14; //normalize the ascii value to the font.c array
 		int i;
 		for( i=0; i<14; i++){
 			twelve_write(originx,originy+i,vcr_font[fontpos + i]);
@@ -49,7 +49,7 @@ void write_character(char c){
 }
 
 void writestr(char str[]){
-	size_t length = sizeof(str);
+	size_t length = strlen(str);
 	int i;
 	for(int i=0; i<length; i++){
 		write_character(str[i]);
