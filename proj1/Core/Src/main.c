@@ -106,7 +106,8 @@ int main(void)
   display_clear();
   buffer_clear();
 
-  writestr("JAMMING DETECTED  PWR-RX: 1.37 MW");
+  origin_set(0, 0);
+  writestr("JAMMING DETECTED");
   //set_rawpixel(1,1);
   //set_rawpixel(258,1);
   display_update();
