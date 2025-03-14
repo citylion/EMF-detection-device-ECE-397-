@@ -103,10 +103,15 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   display_setup();
-  //display_test();
- // display_clear();
- //writestr("HELLO");
-  //display_update();
+  display_clear();
+  buffer_clear();
+
+  origin_set(0, 0);
+  writestr("JAMMING DETECTED");
+  //set_rawpixel(1,1);
+  //set_rawpixel(258,1);
+  display_update();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */

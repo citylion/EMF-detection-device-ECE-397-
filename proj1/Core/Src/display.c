@@ -567,20 +567,29 @@ void display_clear(){
 	ClearPixel_25664();
 }
 
+void buffer_clear(){
+
+	size_t length = sizeof(buffer);
+	for(int i=0; i<length; i++){
+		buffer[i] = 0;
+	}
+
+}
+
 //sets the given pixel to 0 (off) or 1 (on)
 //Pixel 255 is the rightmost pixel of the first row
 //Pixel 256 is the leftmost pixel of the second row
 void set_rawpixel(int pixelNum, _Bool value){
-	int bytenum = pixelNum/8;
-	int shift = pixelNum%8;
-	char dat = buffer[bytenum];
+	int wordnum = pixelNum/8;
+	int shift = 7- (pixelNum%8);
+	unsigned int dat = buffer[wordnum];
 	unsigned int mask = 1 << shift;
 	if (value)
 	    dat |= mask;    // set the bit
 	else
 	    dat &= ~mask;   // clear the bit
 
-	buffer[bytenum] = dat;
+	buffer[wordnum] = dat;
 }
 
 int invalid=0;//number of invalid calls
@@ -588,23 +597,27 @@ int invalid=0;//number of invalid calls
 //sets the given pixel to 0 (off) or 1 (on)
 //Pixel 0,0 is the top-left-most pixel.
 //pixel 255,63 is the bottom-right-most pixel
+/*
 void set_pixel(int x, int y, _Bool value){
 	//prevent invalid calls
 	if(x>255 || x<0 || y<0 || y>63){ invalid++; return; };
 	int raw = y * 256 +x;
 }
+*/
 
 //sets 12 pixels
 void twelve_write(int x, int y, int dat){
 	if(x>243 || x<0 || y<0 || y>63){ invalid++; return; };
 	int raw = y * 256 +x;
-	int pos=0;
+
 	int i;
-	for(i=1; i<2049; i=i*2){
-		_Bool value = dat &i;
-		set_rawpixel(raw+pos,value);
-		pos++;
+	for(i=0; i<12; i++){
+		//unsigned int mask = 1 << i;
+		unsigned int mask = 4096 >> i;
+		_Bool value = mask & dat;
+		set_rawpixel(raw+i,value);
 	}
+
 }
 
 /*****************************************************

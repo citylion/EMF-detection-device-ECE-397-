@@ -24,6 +24,10 @@ void display_image();
 
 void display_update();
 
+void buffer_clear();
+
+void set_rawpixel(int pixelNum, _Bool value);
+
 //sets 12 pixels
 void twelve_write(int x, int y, int dat);
 
