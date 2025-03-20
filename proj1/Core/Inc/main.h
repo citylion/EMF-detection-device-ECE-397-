@@ -67,6 +67,10 @@ void Error_Handler(void);
 #define DISP_SPI1_SCK_GPIO_Port GPIOA
 #define DISP_SPI1_MOSI_Pin GPIO_PIN_7
 #define DISP_SPI1_MOSI_GPIO_Port GPIOA
+#define GPS_TX_Pin GPIO_PIN_9
+#define GPS_TX_GPIO_Port GPIOA
+#define GPS_RX_Pin GPIO_PIN_10
+#define GPS_RX_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 
