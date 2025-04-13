@@ -18,9 +18,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "stdio.h"
-#include "l86_gnss_parser.h"
-
+#include "display.h"
+#include "gps.h"
+#include "text.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -50,17 +50,6 @@ SPI_HandleTypeDef hspi3;
 
 UART_HandleTypeDef huart1;
 
-UART_HandleTypeDef huart2; // GPS UART
-DMA_HandleTypeDef hdma_Usart2_rx; // DMA for GPS
-
-// GPS data struct
-static S_GPS_L86_DATA gnss_data;
-char lat_str[32];
-char lon_str[32];
-
-// Setup flag
-unsigned int setup = 0;
-
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -72,11 +61,6 @@ static void MX_ADC1_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SPI3_Init(void);
 static void MX_USART1_UART_Init(void);
-
-static void MX_USART1_UART_Init(void);
-static void MX_USART2_UART_Init(void); // Make sure this exists
-static void MX_I2C1_Init(void);
-//static void MX_DMA_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -89,34 +73,6 @@ static void MX_I2C1_Init(void);
   * @brief  The application entry point.
   * @retval int
   */
-
-void ftoa(float n, char *res, int afterpoint)
-{
-    int i = 0;
-    if (n < 0) {
-        res[i++] = '-';
-        n = -n;
-    }
-
-    int ipart = (int)n;
-    float fpart = n - (float)ipart;
-
-    // Convert integer part to string
-    i += sprintf(res + i, "%d", ipart);
-
-    res[i++] = '.';
-
-    // Convert fractional part to string
-    for (int j = 0; j < afterpoint; j++) {
-        fpart *= 10;
-    }
-
-    sprintf(res + i, "%0*d", afterpoint, (int)fpart);
-}
-
-
-
-
 int main(void)
 {
 
@@ -142,18 +98,10 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  //MX_DMA_Init();
   MX_ADC1_Init();
   MX_SPI1_Init();
   MX_SPI3_Init();
   MX_USART1_UART_Init();
-  //MX_USART2_UART_Init();
- // MX_I2C1_Init();
-
-  // Start GPS DMA reception
-  UsrGpsL86Init(&huart2);
-
-
   /* USER CODE BEGIN 2 */
 
 
@@ -163,49 +111,42 @@ int main(void)
   buffer_clear();
 
   origin_set(0, 0);
-  //writestr("JAMMING DETECTED");
- // origin_set(20,20);
+  writestr("GPS SUBSYS START...");
+  // origin_set(20,20);
   //writestr("MHZ : 2.4");
   //set_rawpixel(1,1);
   //set_rawpixel(258,1);
   //display_update();
 
-  //HAL_Delay(2000);
+  display_update();
+  initializeGPS(2);
+  receive(1);
+  HAL_Delay(5000);
+
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
-
   while (1)
   {
-	  // Parse latest GPS values
-	      Usr_GpsL86GetValues(&gnss_data);
-
-	      // Convert floats to strings
-	      ftoa(gnss_data.lat, lat_str, 6);
-	      ftoa(gnss_data.lon, lon_str, 6);
-
-	      // Build display strings
-	      char display_lat[32] = "LAT: ";
-	      char display_lon[32] = "LON: ";
-
-	      strcat(display_lat, lat_str);
-	      strcat(display_lon, lon_str);
-
-	      // Show on OLED
-	      display_clear();
-	      origin_set(0, 0);
-	      writestr("GPS LOCATION:");
-	      origin_set(0, 20);
-	      writestr(display_lat);
-	      origin_set(0, 40);
-	      writestr(display_lon);
-	      display_update();
-
-	      HAL_Delay(10000);
-      }
+    /* USER CODE END WHILE */
+	  char msg[82];
+	  if(msg[0] == '$'){
+		  display_clear();
+		  origin_set(0, 0);
+		  for(int i=0; i<82; i++){
+			  char c = msg[i];
+			  if(c==10 || c==13){
+				  break;
+			  }
+			  write_character(c);
+		  }
+	  }
+	  display_update();
+	  HAL_Delay(5000);
+    /* USER CODE BEGIN 3 */
+  }
   /* USER CODE END 3 */
 }
 
@@ -485,7 +426,11 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+//callback is called whenever the cpu is finished receiving a uart message
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  receive(0);
+}
 /* USER CODE END 4 */
 
 /**
