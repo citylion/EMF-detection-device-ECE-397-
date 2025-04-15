@@ -12,4 +12,6 @@ void writestr(char str[]);
 
 void origin_set(int x, int y);
 
+void write_character(char c);
+
 #endif /* INC_TEXT_H_ */

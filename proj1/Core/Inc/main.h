@@ -53,7 +53,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void main_call(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -71,6 +71,8 @@ void Error_Handler(void);
 #define GPS_TX_GPIO_Port GPIOA
 #define GPS_RX_Pin GPIO_PIN_10
 #define GPS_RX_GPIO_Port GPIOA
+#define GPS_RESET_Pin GPIO_PIN_7
+#define GPS_RESET_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

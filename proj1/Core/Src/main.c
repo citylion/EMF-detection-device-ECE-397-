@@ -21,6 +21,7 @@
 #include "display.h"
 #include "gps.h"
 #include "text.h"
+#include "utils.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -111,7 +112,7 @@ int main(void)
   buffer_clear();
 
   origin_set(0, 0);
-  writestr("GPS SUBSYS START...");
+  writestr("GPS SUBSYS START..");
   // origin_set(20,20);
   //writestr("MHZ : 2.4");
   //set_rawpixel(1,1);
@@ -119,8 +120,10 @@ int main(void)
   //display_update();
 
   display_update();
-  initializeGPS(2);
-  receive(1);
+  startAsyncReceive(1);
+  //setBaud9600();
+  initializeGPS(0);
+  //setBaud9600();
   HAL_Delay(5000);
 
 
@@ -131,20 +134,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  char msg[82];
-	  if(msg[0] == '$'){
-		  display_clear();
-		  origin_set(0, 0);
-		  for(int i=0; i<82; i++){
-			  char c = msg[i];
-			  if(c==10 || c==13){
-				  break;
-			  }
-			  write_character(c);
-		  }
-	  }
-	  display_update();
-	  HAL_Delay(5000);
+	  maincall();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -354,7 +344,8 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 9600;
+  huart1.Init.BaudRate = 115200;
+  //huart1.Init.BaudRate = 9600;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -405,7 +396,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, DISP_GPIO_RS_Pin|DISP_GPIO_DC_Pin|DISP_GPIO_CS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPS_RESET_GPIO_Port, GPS_RESET_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : DISP_GPIO_RS_Pin DISP_GPIO_DC_Pin DISP_GPIO_CS_Pin */
   GPIO_InitStruct.Pin = DISP_GPIO_RS_Pin|DISP_GPIO_DC_Pin|DISP_GPIO_CS_Pin;
@@ -414,12 +405,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_7;
+  /*Configure GPIO pin : GPS_RESET_Pin */
+  GPIO_InitStruct.Pin = GPS_RESET_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPS_RESET_GPIO_Port, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
@@ -429,7 +420,8 @@ static void MX_GPIO_Init(void)
 //callback is called whenever the cpu is finished receiving a uart message
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-  receive(0);
+  startAsyncReceive(0);
+
 }
 /* USER CODE END 4 */
 
