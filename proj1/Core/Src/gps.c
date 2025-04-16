@@ -14,8 +14,11 @@ extern UART_HandleTypeDef huart1;
 
 
 unsigned int writePos = 0;
-unsigned char nmeaBuffer[512];//can store several received messages
-unsigned char rx_buffer[128];//a single message is ~82
+unsigned char nmea_buffer[1024];//can store several received messages
+unsigned char rx_buffer[1024];//a single message is ~82
+double lat = -1;
+double lon = -1;
+_Bool gpsJammed = 0;
 
 //13 and 10 are end characters
 
@@ -26,61 +29,50 @@ unsigned char rx_buffer[128];//a single message is ~82
 void initializeGPS(uint8_t start_type)
 {
 
+	nmea_buffer[1023] = '\0';
+	rx_buffer[1023] = '\0';
+
 	HAL_GPIO_WritePin(GPS_RESET_GPIO_Port,GPS_RESET_Pin,0);
 	HAL_Delay(100);
 	HAL_GPIO_WritePin(GPS_RESET_GPIO_Port,GPS_RESET_Pin,1);
 
-	/*
-	 * 2.4.2. PAIR002: PAIR_GNSS_SUBSYS_POWER_ON
-	 * Powers on the GNSS system, including DSP, RF, PE and clock.
-	 */
 
-	transmit("$PAIR002*38\r\n");
-
-	if(start_type == 0){//cold start
-
-		/*
-		 * 2.4.6. PAIR006: PAIR_GNSS_SUBSYS_COLD_START
-		 * Performs a cold start, which means that will be erased location information stored in the receiver, including
-		   time, position, almanacs and ephemeris data.
-		 */
-		transmit("$PAIR005*3F\r\n");
-	}
-	else{//warm start
-
-		/*
-		 * Performs a warm start. A warm start means that the GNSS module remembers only rough time, position,
-		and almanacs data, and thus needs to download an ephemeris before it can get a valid position.
-		 */
-
-		transmit("$PAIR006*3C\r\n");
-	}
 
 }
 
 
 
 void startAsyncReceive(_Bool startup){
-	//first, put the prior message in the main buffer
-	unsigned int buffSize = sizeof(nmeaBuffer);//size of the main buffer,
+
 
 	if(!startup){
 
-		for(int i=0; i<128; i++){
-				if(writePos >= buffSize){
-					writePos=0;
+		//first, put the prior message in the main buffer
+		unsigned int buffSize = sizeof(nmea_buffer);//size of the main buffer,
+		unsigned int rxBuffSize = sizeof(rx_buffer);
+		while(strchr(rx_buffer,'$') != NULL){
+			char* ptr = strchr(rx_buffer,'$');
+			int i=0;
+			while(1){
+				if(ptr[i] == '\0'){
+					break; break;
 				}
-				char c = rx_buffer[i];
-				nmeaBuffer[writePos] = c;
-				writePos++;
-
-				if(c == '\n'){
-					break;
+				else{
+					if(writePos >= buffSize-1){
+						writePos=0;
+					}
+					nmea_buffer[writePos] = ptr[i];
+					writePos++;
 				}
+				if(ptr[i] == '\n'){
+						break;
+				}
+				i++;
+			}
 		}
 	}
 
-	HAL_UARTEx_ReceiveToIdle_IT(&huart1, rx_buffer, sizeof(rx_buffer));
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, sizeof(rx_buffer));
 }
 
 void transmit(char* c)
@@ -92,20 +84,20 @@ void transmit(char* c)
 //gets the first nmea message found in the main large buffer "buffer"
 //then overwrites that message so it is not read again by the next
 //call to this function
-void destructiveReadNmeaMsg(char* ptr){
+_Bool destructiveReadNmeaMsg(char* ptr){
 	unsigned int pos = 0;
 
 	_Bool start = 0;
 
 	unsigned int rwPos1 = 0;
 	unsigned int rwPos2 = 0;
-	int buffSize = sizeof(nmeaBuffer);//size of the main buffer,
+	int buffSize = sizeof(nmea_buffer);//size of the main buffer,
 	//we are going to iterate over the entire buffer looking for a message:
-	for(int i=0; i<2*buffSize;i++){//the 2*size is intentional, since a message may start at the end of the buffer and "wrap" over, something more like 1.2x is probably more realistic
+	for(int i=0; i<2*buffSize-1;i++){//the 2*size is intentional, since a message may start at the end of the buffer and "wrap" over, something more like 1.2x is probably more realistic
 		if(i>buffSize && !start){
 			break;//if we are wrapped back around and still didnt find a character, then there is no message.
 		}
-		char c = nmeaBuffer[i%buffSize];
+		char c = nmea_buffer[i%buffSize];
 		if(c == '$'){
 			rwPos1=i%buffSize;
 			start=1;
@@ -122,22 +114,18 @@ void destructiveReadNmeaMsg(char* ptr){
 		//first overwrite the read msg
 		int i=rwPos1;
 		while(1){
-			nmeaBuffer[i] = 255;
+			nmea_buffer[i] = 255;
 			i++;
 			if(i > rwPos2){
 				break;
 			}
-			if(i>buffSize){
+			if(i>=buffSize){
 				i=0;
 			}
 		}
+		ptr[pos] = '\0';//null terminator
 	}
-	ptr[pos] = '\0';//null terminator
-
-}
-
-void setBaud9600(void){
-	transmit("$PAIR864,0,0,9600*13\r\n");
+	return start;
 }
 
 
@@ -146,37 +134,60 @@ void setBaud9600(void){
  * For example, we want to save gps data if the message type is a gps message
  * we also want to save jamming status of the gps chip.
  */
-void handleNemaMsg(char* ptr){
+void handleNmeaMsg(char* msg){
 	//unfinished
-	short chk1 = nmeaChecksum(ptr);
+	char last = 1;
+	char* ptr = strstr(msg,"$GNRMC");
+	if(ptr != NULL){
+		//pos=20th char is start of lat
+		//pos=32th char is direction N/S character
+		//pos=34th char is start of lon
+		//pos=47 is the direction W/E character
+
+		int origin = 20;
+		if(ptr[origin] == ','){
+			gpsJammed = 1; return;
+		}
+		else{
+			gpsJammed = 0;
+		}
+
+
+		int sublat=10*asciiToHex(ptr[origin]) + 1*asciiToHex(ptr[origin+1]);         // V intentional skip +4
+		float latminutes = ( 10*asciiToHex(ptr[origin+2]) + 1*asciiToHex(ptr[origin+3]) + 0.1*asciiToHex(ptr[origin+5]) + 0.01*asciiToHex(ptr[origin+6]) + 0.001*asciiToHex(ptr[origin+7])) / 60;
+		lat = sublat + latminutes;
+
+		origin=32;
+		if(ptr[origin] == 'S'){ lat = lat*-1;}
+
+
+		origin = 34;
+		if(ptr[origin] == ','){
+			gpsJammed = 1; return;
+		}
+		else{
+			gpsJammed = 0;
+		}
+
+		int sublon=10*asciiToHex(ptr[origin]) + 1*asciiToHex(ptr[origin+1]);         // V intentional skip +4
+		float lonminutes = ( 10*asciiToHex(ptr[origin+2]) + 1*asciiToHex(ptr[origin+3]) + 0.1*asciiToHex(ptr[origin+5]) + 0.01*asciiToHex(ptr[origin+6]) + 0.001*asciiToHex(ptr[origin+7])) / 60;
+		lon = sublon + lonminutes;
+
+		origin = 47;
+		if(ptr[origin] == 'W'){ lon = lon*-1; }
+	}
 
 }
 
 void handleAllNemaMsg(){
-	//unfinished
-}
+	while(strchr(nmea_buffer,'$') != NULL){
+		char msg[82];
 
-/*
- * 2.4.47. PAIR491: PAIR_EASY_GET_STATUS
-	Queries the status of the EASY function.
-
-	Type:
-	Get
-
-	Synopsis:
-	$PAIR491*<Checksum><CR><LF>
- */
-
-void requestEasyStatus(void){
-
-	transmit("$PAIR491*36\r\n");
-
-}
-
-void requestDebugLog(void){
-
-	transmit("$PAIR086,1*29\r\n");
-
+		_Bool success = destructiveReadNmeaMsg(msg);
+		if(success){
+			handleNmeaMsg(msg);
+		}
+	}
 }
 
 //given any nema message, parses out the address and value
@@ -224,10 +235,10 @@ char parseChecksum(char* msg){
 			found=1;
 		}
 		else if(found == 1 && msb == 127){
-			msb = asciiToLB1(c);
+			msb = asciiToHex(c);
 		}
 		else if(found == 1 && msb != 127){
-			lsb = asciiToLB1(c);
+			lsb = asciiToHex(c);
 		}
 		else if(found == 1){
 			break;
@@ -241,7 +252,7 @@ char parseChecksum(char* msg){
 
 }
 
-char asciiToLB1(char c){
+uint8_t asciiToHex(char c){
 	switch(c){
 		case '0': return 0; break;
 		case '1': return 1; break;
@@ -263,6 +274,21 @@ char asciiToLB1(char c){
 	}
 
 }
+
+_Bool gps_isJammed(void){
+	return gpsJammed;
+}
+
+double getLon(void){
+	return lon;
+}
+
+double getLat(void){
+	return lat;
+}
+
+
+
 
 
 

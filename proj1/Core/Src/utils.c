@@ -10,6 +10,7 @@
 #include "text.h"
 #include "gps.h"
 #include "stm32g4xx_hal.h"
+#include "stdlib.h"
 
 /*
 
@@ -26,27 +27,41 @@ static unsigned int counter = 0;
 void maincall(void){
 
 	counter++;
-
-	char msg[82];
-	destructiveReadNmeaMsg(msg);//give the function the pointer to msg, it will
+	handleAllNemaMsg();
 	//write to the pointer, giving us any message received on uart
-	if(msg[0] == '$'){
 
-	  origin_set(0, 0);
-	  for(int i=0; i<82; i++){
-		  char c = msg[i];
-		  if(c==10 || c==13 || c == '\0'){
-			  break;
-		  }
-		  write_character(c);
-	  }
-	}
-	if(counter%50 == 0){
+	if(counter%10 == 0){
+		display_clear();
+
+		if(gps_isJammed){
+				origin_set(0,0);
+				writestr("GPS JAMMED?");
+			}
+			else{
+				double lon = getLon();
+				origin_set(0,14);
+				size_t len = snprintf(NULL, 0, "LON: %.3f", lon);
+				char *lonStr = malloc(len + 1);
+				if (lonStr) {
+					snprintf(lonStr, len + 1, "LON: %.3f", lon);
+					free(lonStr);
+				}
+				writestr(lonStr);
+
+				double lat = getLat();
+				origin_set(0,28);
+				 len = snprintf(NULL, 0, "LAT: %.3f", lat);
+				char *latStr = malloc(len + 1);
+				if (latStr) {
+				    snprintf(latStr, len + 1, "LAT: %.3f", lat);
+
+				    free(latStr);
+				}
+				writestr(latStr);
+			}
+
 		display_update();
-		requestEasyStatus();
 	}
-
-
 
 }
 

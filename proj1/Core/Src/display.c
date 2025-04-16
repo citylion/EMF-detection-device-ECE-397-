@@ -563,7 +563,7 @@ void display_test(){
 
 
 void display_clear(){
-
+	buffer_clear();
 	ClearPixel_25664();
 }
 

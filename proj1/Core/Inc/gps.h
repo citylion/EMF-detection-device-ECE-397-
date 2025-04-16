@@ -16,17 +16,23 @@ void startAsyncReceive(_Bool startup);
 
 void transmit(char* c);
 
-void destructiveReadNmeaMsg(char* ptr);
+_Bool destructiveReadNmeaMsg(char* ptr);
 
 char nmeaChecksum(char* msg);
 
 char parseChecksum(char* msg);
 
-char asciiToLB1(char c);
+uint8_t asciiToHex(char c);
 
-void requestEasyStatus(void);
+_Bool gps_isJammed(void);
 
-void setBaud9600(void);
+double getLon(void);
+
+double getLat(void);
+
+void handleNmeaMsg(char* msg);
+
+void handleAllNemaMsg(void);
 
 
 #endif /* INC_GPS_H_ */
