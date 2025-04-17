@@ -37,14 +37,14 @@ void origin_next(){
 	}
 }
 
-//46 is the first ascii character supported by the font it is character "." 47 is "/"
+//45 is the first ascii character supported by the font it is character "-"
 
 //write a single ascii character at the current origin values
 void write_character(char c){
-	if(c<45 || c>96){
+	if(c<44 || c>96){
 		c=96;//whitespace character
 	}
-		int fontpos = (c-46)*(14); //normalize the ascii value to the font.c array
+		int fontpos = (c-45)*(14); //normalize the ascii value to the font.c array
 		int i;
 		for( i=0; i<14; i++){
 			twelve_write(originx,originy+i,vcr_font[fontpos + i]);

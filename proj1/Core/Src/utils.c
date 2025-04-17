@@ -27,13 +27,13 @@ static unsigned int counter = 0;
 void maincall(void){
 
 	counter++;
-	handleAllNemaMsg();
 	//write to the pointer, giving us any message received on uart
 
-	if(counter%10 == 0){
+	//every 100 calls we will update the display
+	if(counter%100 == 0){
 		display_clear();
 
-		if(gps_isJammed){
+		if(gps_isJammed()){
 				origin_set(0,0);
 				writestr("GPS JAMMED?");
 			}

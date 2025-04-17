@@ -14,7 +14,7 @@ extern UART_HandleTypeDef huart1;
 
 
 unsigned int writePos = 0;
-unsigned char nmea_buffer[1024];//can store several received messages
+
 unsigned char rx_buffer[1024];//a single message is ~82
 double lat = -1;
 double lon = -1;
@@ -29,7 +29,6 @@ _Bool gpsJammed = 0;
 void initializeGPS(uint8_t start_type)
 {
 
-	nmea_buffer[1023] = '\0';
 	rx_buffer[1023] = '\0';
 
 	HAL_GPIO_WritePin(GPS_RESET_GPIO_Port,GPS_RESET_Pin,0);
@@ -43,33 +42,8 @@ void initializeGPS(uint8_t start_type)
 
 
 void startAsyncReceive(_Bool startup){
-
-
 	if(!startup){
-
-		//first, put the prior message in the main buffer
-		unsigned int buffSize = sizeof(nmea_buffer);//size of the main buffer,
-		unsigned int rxBuffSize = sizeof(rx_buffer);
-		while(strchr(rx_buffer,'$') != NULL){
-			char* ptr = strchr(rx_buffer,'$');
-			int i=0;
-			while(1){
-				if(ptr[i] == '\0'){
-					break; break;
-				}
-				else{
-					if(writePos >= buffSize-1){
-						writePos=0;
-					}
-					nmea_buffer[writePos] = ptr[i];
-					writePos++;
-				}
-				if(ptr[i] == '\n'){
-						break;
-				}
-				i++;
-			}
-		}
+		handlePositionMsg(rx_buffer);
 	}
 
 	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, sizeof(rx_buffer));
@@ -81,60 +55,11 @@ void transmit(char* c)
 }
 
 
-//gets the first nmea message found in the main large buffer "buffer"
-//then overwrites that message so it is not read again by the next
-//call to this function
-_Bool destructiveReadNmeaMsg(char* ptr){
-	unsigned int pos = 0;
-
-	_Bool start = 0;
-
-	unsigned int rwPos1 = 0;
-	unsigned int rwPos2 = 0;
-	int buffSize = sizeof(nmea_buffer);//size of the main buffer,
-	//we are going to iterate over the entire buffer looking for a message:
-	for(int i=0; i<2*buffSize-1;i++){//the 2*size is intentional, since a message may start at the end of the buffer and "wrap" over, something more like 1.2x is probably more realistic
-		if(i>buffSize && !start){
-			break;//if we are wrapped back around and still didnt find a character, then there is no message.
-		}
-		char c = nmea_buffer[i%buffSize];
-		if(c == '$'){
-			rwPos1=i%buffSize;
-			start=1;
-		}
-		if(start==1){
-			ptr[pos] = c;pos++;
-		}
-		if(start==1 && c == 10){
-			rwPos2=i%buffSize;
-			break;
-		}
-	}
-	if(start){
-		//first overwrite the read msg
-		int i=rwPos1;
-		while(1){
-			nmea_buffer[i] = 255;
-			i++;
-			if(i > rwPos2){
-				break;
-			}
-			if(i>=buffSize){
-				i=0;
-			}
-		}
-		ptr[pos] = '\0';//null terminator
-	}
-	return start;
-}
-
 
 /*
- * Certain messages require certain actions, others do not
- * For example, we want to save gps data if the message type is a gps message
- * we also want to save jamming status of the gps chip.
+ * Finds and logs any position data received, if valid
  */
-void handleNmeaMsg(char* msg){
+void handlePositionMsg(char* msg){
 	//unfinished
 	char last = 1;
 	char* ptr = strstr(msg,"$GNRMC");
@@ -160,8 +85,8 @@ void handleNmeaMsg(char* msg){
 		origin=32;
 		if(ptr[origin] == 'S'){ lat = lat*-1;}
 
-
-		origin = 34;
+		//origin = 34;
+		origin = 35;
 		if(ptr[origin] == ','){
 			gpsJammed = 1; return;
 		}
@@ -177,17 +102,6 @@ void handleNmeaMsg(char* msg){
 		if(ptr[origin] == 'W'){ lon = lon*-1; }
 	}
 
-}
-
-void handleAllNemaMsg(){
-	while(strchr(nmea_buffer,'$') != NULL){
-		char msg[82];
-
-		_Bool success = destructiveReadNmeaMsg(msg);
-		if(success){
-			handleNmeaMsg(msg);
-		}
-	}
 }
 
 //given any nema message, parses out the address and value
