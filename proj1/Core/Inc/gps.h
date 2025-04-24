@@ -10,7 +10,7 @@
 
 
 //see gps.c for code details
-void initializeGPS(uint8_t start_type);
+void initializeGPS();
 
 void startAsyncReceive(_Bool startup);
 

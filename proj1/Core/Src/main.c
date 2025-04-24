@@ -22,6 +22,7 @@
 #include "gps.h"
 #include "text.h"
 #include "utils.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -114,11 +115,12 @@ int main(void)
   buffer_clear();
 
   origin_set(0, 0);
+
   writestr("GPS SUBSYS START..");
-
+  initializeGPS();
   display_update();
-  startAsyncReceive(1);
 
+  startAsyncReceive(1);
   /* USER CODE END 2 */
 
   /* Infinite loop */

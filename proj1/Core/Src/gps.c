@@ -16,8 +16,8 @@ extern UART_HandleTypeDef huart1;
 unsigned int writePos = 0;
 
 unsigned char rx_buffer[1024];//a single message is ~82
-double lat = -1;
-double lon = -1;
+double lat = -1.0000;
+double lon = -1.0000;
 _Bool gpsJammed = 0;
 
 //13 and 10 are end characters
@@ -26,7 +26,7 @@ _Bool gpsJammed = 0;
  * start_type value indicates the start-type, with 0 being a cold start
  * which could take 15 minutes for the gps.
  */
-void initializeGPS(uint8_t start_type)
+void initializeGPS()
 {
 
 	rx_buffer[1023] = '\0';
@@ -34,9 +34,6 @@ void initializeGPS(uint8_t start_type)
 	HAL_GPIO_WritePin(GPS_RESET_GPIO_Port,GPS_RESET_Pin,0);
 	HAL_Delay(100);
 	HAL_GPIO_WritePin(GPS_RESET_GPIO_Port,GPS_RESET_Pin,1);
-
-
-
 }
 
 
@@ -53,8 +50,6 @@ void transmit(char* c)
 {
     HAL_UART_Transmit(&huart1, (uint8_t *)c, strlen(c), HAL_MAX_DELAY);
 }
-
-
 
 /*
  * Finds and logs any position data received, if valid
@@ -190,10 +185,14 @@ uint8_t asciiToHex(char c){
 }
 
 _Bool gps_isJammed(void){
+	if(lon == -1.000 && lat == -1.000){
+		return 1;
+	}
 	return gpsJammed;
 }
 
 double getLon(void){
+
 	return lon;
 }
 

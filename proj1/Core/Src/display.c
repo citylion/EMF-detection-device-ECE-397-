@@ -450,8 +450,8 @@ void FillPixel_25664()
 void ImageDisplay_25664(unsigned char *image)
 {
   unsigned int i, j, buff;
-  //Set_Remap_25664(0x14,0x11);
-  Set_Remap_25664(0x06,0x11); // To Flip Orientation 180 Degrees
+  Set_Remap_25664(0x14,0x11);
+  //Set_Remap_25664(0x06,0x11); // To Flip Orientation 180 Degrees
   Set_Column_Address_25664(0x1C,0x5B);
   Set_Row_Address_25664(0x00,0x3F);
   Set_Write_RAM_25664();
@@ -561,20 +561,17 @@ void display_test(){
 	ImageDisplay_25664(NHD_Logo);
 }
 
-
-void display_clear(){
-	buffer_clear();
-	ClearPixel_25664();
-}
-
 void buffer_clear(){
-
 	size_t length = sizeof(buffer);
 	for(int i=0; i<length; i++){
 		buffer[i] = 0;
 	}
-
 }
+
+void display_clear(){
+	ClearPixel_25664();
+}
+
 
 //sets the given pixel to 0 (off) or 1 (on)
 //Pixel 255 is the rightmost pixel of the first row
